@@ -12,5 +12,5 @@ RUN pip install python-dotenv
 
 RUN chmod +x run_experiments.sh
 
-ENTRYPOINT ["./run_experiments.sh", "openai,anthropic,deepseek,local"]
+ENTRYPOINT ["./run_experiments.sh", "openai,anthropic,local"]
 
