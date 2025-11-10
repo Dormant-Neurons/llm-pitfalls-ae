@@ -107,7 +107,7 @@ The results will then be printet to the console (stdout) after the experiment ha
 
 #### B.1 Lab-Setting
 
-1. The experiment requires a huggingface token to download the datasets from huggingface (free-of-charge).
+1. The experiment requires a huggingface token to download the datasets from huggingface (free-of-charge). Create an account [here](https://huggingface.co/join) and generate an access token following [this](https://huggingface.co/docs/hub/security-tokens) guide. The experiments will not incur any costs.
 
 ```bash
 cd experiment_b_1
@@ -156,7 +156,7 @@ We evaluate the following models:
 
 ##### Setup
 
-1. The experiment requires API tokens from huggingface (free of charge), openai, deepseek and anthropic.
+1. The experiment requires API tokens from huggingface (free of charge), openai, deepseek and anthropic. Create a Huggingface account [here](https://huggingface.co/join) and generate an access token following [this](https://huggingface.co/docs/hub/security-tokens) guide. The experiments will not incur any costs on HuggingFace.
 
 ```bash
 cd experiment_b_2
@@ -183,7 +183,7 @@ python run_experiment.py --backend <local, openai, anthropic, or deepseek> --mod
 
 ### Experiment C: Context Truncation
 
-1. The experiment requires a huggingface token to download the datasets from huggingface (free-of-charge).
+1. The experiment requires a huggingface token to download the datasets from huggingface (free-of-charge). Create an account [here](https://huggingface.co/join) and generate an access token following [this](https://huggingface.co/docs/hub/security-tokens) guide. The experiments will not incur any costs.
 
 ```bash
 cd experiment_c
