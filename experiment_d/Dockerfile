@@ -6,6 +6,7 @@ RUN ln -snf /usr/share/zoneinfo/$CONTAINER_TIMEZONE /etc/localtime && echo $CONT
 RUN apt-get update && apt-get install -y software-properties-common
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt-get update && apt-get upgrade -y && apt-get install -y python3.12 python3.12-venv python3-pip
+RUN apt-get install -y texlive texlive-latex-extra
 
 COPY requirements.txt .
 
