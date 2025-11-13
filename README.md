@@ -217,7 +217,10 @@ This will run the experiment on the specified device with the following default 
 -   Dataset: bigcode/self-oss-instruct-sc2-exec-filter-50k
 -   Block Size: 128
 
-The resulting perplexity plots will be saved to the `plots` directory.
+The resulting perplexity plots will be saved to the root directory of the docker image. You may need to copy them out of the docker container with
+```bash
+docker cp <container_id>:/app/perplexity_histogram_bs128_Qwen2.5-Coder-0.5B.png <destination_path>
+```
 
 > [!NOTE]
 > Since the experiment uses fine-tuning, it is normal that the experiment in its original scope (10 generations) takes a while to run. On our system with an Nvidia L40S GPU the experiment took around 4-5 days.
