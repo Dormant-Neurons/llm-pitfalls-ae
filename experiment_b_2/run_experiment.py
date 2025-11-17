@@ -196,36 +196,58 @@ def strip_formatting(txt: str) -> str:
     return txt.replace("\n", " ").replace("\t", " ").strip()
 
 
-# ── Evaluation loop ──
-def evaluate_commit(df: pd.DataFrame, backend: CompletionBackend, show_commits: bool = False, suffix: str = "") -> Dict[str, float | int]:
+def evaluate_commit(
+    df: pd.DataFrame,
+    backend: CompletionBackend,
+    show_commits: bool = False,
+    suffix: str = "",
+) -> Dict[str, float | int]:
     exact, jaccs = [], []
 
     # Be tolerant if dataset uses 'project' instead of 'project_url'
-    proj_col = "project_url" if "project_url" in df.columns else ("project" if "project" in df.columns else None)
+    proj_col = "project_url" if "project_url" in df.columns else (
+        "project" if "project" in df.columns else None
+    )
     if proj_col is None:
         raise RuntimeError("Dataset missing 'project_url'/'project' column.")
 
-    iterator: List[Tuple[str, str, str]] = list(zip(df[proj_col], df["commit_id"], df["commit_message"]))
+    iterator: List[Tuple[str, str, str]] = list(
+        zip(df[proj_col], df["commit_id"], df["commit_message"])
+    )
 
-    for proj, cid, true_msg in tqdm(iterator, desc="Commit Message Completion", total=len(df)):
+    for proj, cid, true_msg in tqdm(
+        iterator, desc="Commit Message Completion", total=len(df)
+    ):
         norm_truth = normalise(true_msg)
-        hint_words = norm_truth.split()
-        hint = " ".join(hint_words[: len(hint_words) // 2])  # first half as partial
 
-        pred = normalise(backend.complete(proj, cid, hint, COMMIT_MESSAGE_SYSTEM_PROMPT, suffix=suffix))
+        truth_words_full = norm_truth.split()
+        split_idx = len(truth_words_full) // 2
+        hint = " ".join(truth_words_full[:split_idx])
 
-        truth_stripped = strip_formatting(norm_truth)
-        pred_stripped = strip_formatting(pred)
+        pred = normalise(
+            backend.complete(proj, cid, hint, COMMIT_MESSAGE_SYSTEM_PROMPT, suffix=suffix)
+        )
+
+        truth_stripped_full = strip_formatting(norm_truth)
+        pred_stripped_full = strip_formatting(pred)
+
+        truth_tokens = truth_stripped_full.split()
+        pred_tokens = pred_stripped_full.split()
+
+        truth_suffix = " ".join(truth_tokens[split_idx:]) if len(truth_tokens) > split_idx else ""
+        pred_suffix = " ".join(pred_tokens[split_idx:]) if len(pred_tokens) > split_idx else ""
 
         if show_commits:
             print("\n=== COMMIT MESSAGE ===")
-            print(f"Hint     : {hint}")
-            print(f"Actual   : {truth_stripped}")
-            print(f"Predicted: {pred_stripped}")
+            print(f"Hint                : {hint}")
+            print(f"Actual full         : {truth_stripped_full}")
+            print(f"Predicted full      : {pred_stripped_full}")
+            print(f"Actual (2nd half)   : {truth_suffix}")
+            print(f"Predicted (2nd half): {pred_suffix}")
 
-        match = pred_stripped == truth_stripped
+        match = pred_suffix == truth_suffix
         exact.append(int(match))
-        jaccs.append(int(jaccard_similarity(truth_stripped, pred_stripped) > 0.75))
+        jaccs.append(int(jaccard_similarity(truth_suffix, pred_suffix) > 0.75))
 
     return {
         "accuracy": float(np.mean(exact)),
@@ -236,41 +258,59 @@ def evaluate_commit(df: pd.DataFrame, backend: CompletionBackend, show_commits: 
     }
 
 
-def evaluate_code(df: pd.DataFrame, backend: CompletionBackend, show_commits: bool = False, suffix: str = "") -> Dict[str, float | int]:
+def evaluate_code(
+    df: pd.DataFrame,
+    backend: CompletionBackend,
+    show_commits: bool = False,
+    suffix: str = "",
+) -> Dict[str, float | int]:
     exact, jaccs = [], []
 
     if "func" not in df.columns:
         raise RuntimeError("Dataset is missing 'func' column required for code completion.")
 
     # Be tolerant if dataset uses 'project' instead of 'project_url'
-    proj_col = "project_url" if "project_url" in df.columns else ("project" if "project" in df.columns else None)
+    proj_col = "project_url" if "project_url" in df.columns else (
+        "project" if "project" in df.columns else None
+    )
     if proj_col is None:
         raise RuntimeError("Dataset missing 'project_url'/'project' column.")
 
-    iterator: List[Tuple[str, str, str]] = list(zip(df[proj_col], df["commit_id"], df["func"]))
+    iterator: List[Tuple[str, str, str]] = list(
+        zip(df[proj_col], df["commit_id"], df["func"])
+    )
 
-    for proj, cid, full_func in tqdm(iterator, desc="Code Completion", total=len(df)):
+    for proj, cid, full_func in tqdm(
+        iterator, desc="Code Completion", total=len(df)
+    ):
         norm_truth = normalise(full_func)
         lines = norm_truth.splitlines()
+
         split_point = len(lines) // 2
         prefix = "\n".join(lines[:split_point])
-        ground_truth = "\n".join(lines)
 
-        predicted = backend.complete(proj, cid, prefix, system_prompt=CODE_SYSTEM_PROMPT, suffix=suffix)
+        ground_truth_suffix = "\n".join(lines[split_point:])
+
+        predicted = backend.complete(
+            proj, cid, prefix, system_prompt=CODE_SYSTEM_PROMPT, suffix=suffix
+        )
         predicted_norm = normalise(predicted)
+        pred_lines = predicted_norm.splitlines()
 
-        pred_stripped = strip_formatting(predicted_norm)
-        truth_stripped = strip_formatting(ground_truth)
+        predicted_suffix = "\n".join(pred_lines[split_point:])
+
+        truth_suffix_stripped = strip_formatting(ground_truth_suffix)
+        pred_suffix_stripped = strip_formatting(predicted_suffix)
 
         if show_commits:
             print("\n=== FUNCTION COMPLETION ===")
-            print(f"Prefix   :\n{prefix}")
-            print(f"Ground   : {truth_stripped}")
-            print(f"Predicted: {pred_stripped}")
+            print(f"Prefix (hint)         :\n{prefix}")
+            print(f"Ground (2nd half)     : {truth_suffix_stripped}")
+            print(f"Predicted (2nd half)  : {pred_suffix_stripped}")
 
-        match = pred_stripped == truth_stripped
+        match = pred_suffix_stripped == truth_suffix_stripped
         exact.append(int(match))
-        jaccs.append(int(jaccard_similarity(truth_stripped, pred_stripped) > 0.75))
+        jaccs.append(int(jaccard_similarity(truth_suffix_stripped, pred_suffix_stripped) > 0.75))
 
     return {
         "accuracy": float(np.mean(exact)),
